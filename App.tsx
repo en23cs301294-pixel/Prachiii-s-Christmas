@@ -1,25 +1,32 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import Snowfall from './components/Snowfall';
 import Santa from './components/Santa';
 import { AppState, ChristmasPoem } from './types';
-import { generateChristmasPoem } from './services/geminiService';
 
-// Cloud-hosted sources for "Ordinary" by Alex Warren & a backup
-const PRIMARY_SONG = 'https://files.catbox.moe/p55v2i.mp3'; // Alex Warren - Ordinary (Public Stream)
-const BACKUP_SONG = 'https://www.chosic.com/wp-content/uploads/2021/11/Jingle-Bells-Christmas-Instrumental.mp3';
+// Direct high-quality link for "Ordinary" by Alex Warren
+const SONG_URL = 'https://files.catbox.moe/p55v2i.mp3';
+
+const STATIC_POEMS: ChristmasPoem[] = [
+  {
+    title: "A Winter Sparkle",
+    content: "The stars are bright, the snow is new,\nBut nothing shines as bright as you.\nIn the winter chill and festive glow,\nYou're the magic in the show.\nMerry Christmas to the one who brings,\nThe joy that every angel sings."
+  },
+  {
+    title: "Holiday Wonder",
+    content: "Winter winds and frosty air,\nMagic's floating everywhere.\nJust a note to let you know,\nWith every flake of falling snow,\nYou're the highlight of my year,\nBringing warmth and holiday cheer."
+  }
+];
 
 const App: React.FC = () => {
   const [view, setView] = useState<AppState>(AppState.HOME);
-  const [crushName, setCrushName] = useState('Prachiii');
-  const [mood, setMood] = useState('sweet');
-  const [poem, setPoem] = useState<ChristmasPoem | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [crushName] = useState('Prachiii');
   const [openedGift, setOpenedGift] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [showUnlock, setShowUnlock] = useState(true);
+  const [activePoemIndex, setActivePoemIndex] = useState(0);
   
-  const audioObj = useRef<HTMLAudioElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   
   const [personalNoteText] = useState(`Hey Prachiii, 
 
@@ -29,73 +36,37 @@ I hope your Christmas is filled with as much sparkle and joy as you bring to eve
 
 Stay wonderful.`);
 
-  // Function to initialize audio on user gesture
-  const startMagic = async () => {
-    try {
-      if (!audioObj.current) {
-        audioObj.current = new Audio();
-        audioObj.current.loop = true;
-        audioObj.current.volume = 0.5;
-        audioObj.current.crossOrigin = "anonymous";
-      }
-
-      const tryPlay = async (url: string) => {
-        if (!audioObj.current) return false;
-        audioObj.current.src = url;
-        try {
-          await audioObj.current.play();
-          return true;
-        } catch (e) {
-          console.warn(`Audio source ${url} failed:`, e);
-          return false;
-        }
-      };
-
-      // Try playing the requested song
-      let success = await tryPlay(PRIMARY_SONG);
-      
-      // Fallback if primary fails
-      if (!success) {
-        success = await tryPlay(BACKUP_SONG);
-      }
-
-      if (success) {
-        setIsMuted(false);
-      }
-      
-      // Always unlock the UI even if audio fails (so she can read the poem)
-      setShowUnlock(false);
-    } catch (e) {
-      console.error("Critical audio error:", e);
-      setShowUnlock(false);
+  // THE CRITICAL FIX: Unlock audio via user gesture for Vercel/Netlify/Mobile
+  const startMagic = () => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio(SONG_URL);
+      audioRef.current.loop = true;
+      audioRef.current.volume = 0.5;
+      audioRef.current.crossOrigin = "anonymous";
     }
+    
+    audioRef.current.play()
+      .then(() => {
+        setIsMuted(false);
+        setShowUnlock(false);
+      })
+      .catch((err) => {
+        console.error("Audio failed to play:", err);
+        // Even if audio fails, we must let the user into the site
+        setShowUnlock(false);
+      });
   };
 
   const toggleMusic = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (audioObj.current) {
-      if (audioObj.current.paused) {
-        audioObj.current.play().catch(console.error);
+    if (audioRef.current) {
+      if (audioRef.current.paused) {
+        audioRef.current.play().catch(console.error);
         setIsMuted(false);
       } else {
-        audioObj.current.pause();
+        audioRef.current.pause();
         setIsMuted(true);
       }
-    }
-  };
-
-  const handleCreatePoem = async () => {
-    if (!crushName) return;
-    setLoading(true);
-    try {
-      const result = await generateChristmasPoem(crushName, mood);
-      setPoem(result);
-      setView(AppState.MESSAGE_GEN);
-    } catch (error: any) {
-      console.error("Gemini Error:", error);
-      alert(`Santa's Alert 🎅: \n\n${error.message}\n\nImportant: On Vercel, go to Settings -> Environment Variables and add 'API_KEY'.`);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -114,13 +85,13 @@ Stay wonderful.`);
       <Snowfall />
       <Santa />
       
-      {/* UNLOCK OVERLAY - MUST TAP TO ALLOW AUDIO */}
+      {/* UNLOCK OVERLAY - Browser Requirement for Audio */}
       {showUnlock && (
         <div className="fixed inset-0 z-[100] bg-[#020617] flex flex-col items-center justify-center p-6 text-center">
            <div className="text-9xl mb-8 animate-bounce">🎁</div>
            <h2 className="text-5xl md:text-7xl font-christmas text-red-500 mb-6 drop-shadow-2xl">A Gift for {crushName}...</h2>
            <p className="text-slate-400 mb-10 max-w-md text-lg italic leading-relaxed">
-             "Tap to unwrap your Christmas surprise."
+             "Tap to unwrap and hear something special."
            </p>
            <button 
             onClick={startMagic}
@@ -131,7 +102,7 @@ Stay wonderful.`);
         </div>
       )}
 
-      {/* Persistent Music Control */}
+      {/* Music Control */}
       {!showUnlock && (
         <button 
           onClick={toggleMusic}
@@ -177,80 +148,63 @@ Stay wonderful.`);
               </p>
             </div>
 
-            <div className="bg-white/5 backdrop-blur-2xl p-10 rounded-[3rem] border border-white/10 shadow-2xl max-w-lg mx-auto">
-              <h3 className="text-3xl font-semibold mb-8 font-christmas text-red-400 tracking-wide">Poem Generator</h3>
-              <div className="space-y-5">
-                <input 
-                  type="text" 
-                  className="w-full bg-black/30 border border-white/10 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-red-500 transition-all text-xl text-center"
-                  value={crushName}
-                  onChange={(e) => setCrushName(e.target.value)}
-                  placeholder="Enter Name..."
-                />
-                <select 
-                  className="w-full bg-black/30 border border-white/10 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-red-500 text-xl text-center appearance-none cursor-pointer"
-                  value={mood}
-                  onChange={(e) => setMood(e.target.value)}
-                >
-                  <option value="sweet">Sweet & Festive 🍬</option>
-                  <option value="funny">Funny & Jolly 🤡</option>
-                  <option value="poetic">Deep & Thoughtful ✨</option>
-                </select>
-                <button 
-                  onClick={handleCreatePoem}
-                  disabled={loading}
-                  className="w-full bg-gradient-to-r from-red-600 to-red-500 hover:scale-[1.02] py-6 rounded-2xl font-bold text-2xl shadow-2xl transition-all transform active:scale-95 flex justify-center items-center gap-4 mt-6 border-b-4 border-red-800 disabled:opacity-50"
-                >
-                  {loading ? (
-                    <div className="flex items-center gap-3">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-                      <span>Asking Santa...</span>
-                    </div>
-                  ) : (
-                    <>Generate Magic ✨</>
-                  )}
-                </button>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-10">
+              <div 
+                className="bg-white/5 backdrop-blur-xl p-10 rounded-[2.5rem] border border-white/10 hover:border-red-500/30 transition-all cursor-pointer group text-left shadow-2xl" 
+                onClick={() => setView(AppState.POEMS)}
+              >
+                <div className="text-6xl mb-6 group-hover:scale-125 transition-transform duration-500">📜</div>
+                <h4 className="text-2xl font-bold mb-4 text-red-400 font-christmas">Festive Poems</h4>
+                <p className="text-slate-400">Magic verses written for the holiday spirit.</p>
               </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 pt-10">
-              <div className="bg-white/5 backdrop-blur-xl p-10 rounded-[2.5rem] border border-white/10 hover:border-green-500/30 transition-all cursor-pointer group text-left shadow-2xl" onClick={() => setView(AppState.PERSONAL_NOTE)}>
+              
+              <div 
+                className="bg-white/5 backdrop-blur-xl p-10 rounded-[2.5rem] border border-white/10 hover:border-green-500/30 transition-all cursor-pointer group text-left shadow-2xl" 
+                onClick={() => setView(AppState.PERSONAL_NOTE)}
+              >
                 <div className="text-6xl mb-6 group-hover:scale-125 transition-transform duration-500">✉️</div>
-                <h4 className="text-3xl font-bold mb-4 text-green-400 font-christmas">A Heartfelt Note</h4>
-                <p className="text-slate-400 text-lg">A private message kept warm just for you.</p>
+                <h4 className="text-2xl font-bold mb-4 text-green-400 font-christmas">A Heartfelt Note</h4>
+                <p className="text-slate-400">A private message kept warm just for you.</p>
               </div>
-              <div className="bg-white/5 backdrop-blur-xl p-10 rounded-[2.5rem] border border-white/10 hover:border-red-500/30 transition-all cursor-pointer group text-left shadow-2xl" onClick={() => setView(AppState.SURPRISE)}>
+
+              <div 
+                className="bg-white/5 backdrop-blur-xl p-10 rounded-[2.5rem] border border-white/10 hover:border-yellow-500/30 transition-all cursor-pointer group text-left shadow-2xl" 
+                onClick={() => setView(AppState.SURPRISE)}
+              >
                 <div className="text-6xl mb-6 group-hover:rotate-12 transition-transform duration-500">🌟</div>
-                <h4 className="text-3xl font-bold mb-4 text-red-400 font-christmas">Hidden Surprise</h4>
-                <p className="text-slate-400 text-lg">Find the special sparkle in the digital tree.</p>
+                <h4 className="text-2xl font-bold mb-4 text-yellow-400 font-christmas">Hidden Surprise</h4>
+                <p className="text-slate-400">Find the special sparkle in the digital tree.</p>
               </div>
             </div>
           </div>
         )}
 
-        {view === AppState.MESSAGE_GEN && (
-          <div className="animate-scale-in py-10 max-w-2xl mx-auto">
+        {view === AppState.POEMS && (
+          <div className="animate-scale-in py-10 max-w-2xl mx-auto text-center">
             <BackButton />
-            {poem ? (
-              <div className="bg-white p-16 md:p-24 rounded-[4rem] shadow-[0_50px_100px_rgba(0,0,0,0.5)] transform -rotate-1 relative overflow-hidden text-center border-[12px] border-red-50">
-                <div className="absolute top-0 right-0 w-48 h-48 bg-red-600 transform translate-x-24 -translate-y-24 rotate-45 flex items-end justify-center pb-6">
-                    <span className="text-white font-bold text-3xl -rotate-45">✨</span>
-                </div>
-                <h2 className="text-5xl md:text-6xl font-christmas text-red-600 mb-12 font-bold">{poem.title}</h2>
-                <div className="text-3xl md:text-4xl text-slate-800 leading-relaxed italic whitespace-pre-wrap font-christmas">
-                  {poem.content}
-                </div>
-                <div className="mt-20 pt-10 border-t border-slate-100">
-                   <p className="text-slate-400 text-sm mb-8 uppercase tracking-[0.3em] font-bold">Crafted for {crushName}</p>
-                   <button onClick={() => setView(AppState.HOME)} className="bg-green-600 hover:bg-green-700 text-white px-12 py-5 rounded-full font-bold shadow-xl transition-all hover:scale-105 active:scale-95 text-xl">Close</button>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-20 bg-white/5 rounded-[4rem] backdrop-blur-sm border border-white/10">
-                <div className="text-9xl mb-10 animate-bounce">🎅</div>
-                <p className="text-3xl font-christmas text-red-400 animate-pulse tracking-widest">Santa is writing your poem...</p>
-              </div>
-            )}
+            <div className="bg-white p-12 md:p-20 rounded-[4rem] shadow-2xl transform -rotate-1 border-[12px] border-red-50 relative overflow-hidden">
+               <div className="absolute top-0 right-0 w-32 h-32 bg-red-600 transform translate-x-16 -translate-y-16 rotate-45"></div>
+               <h2 className="text-4xl md:text-5xl font-christmas text-red-600 mb-10 font-bold">{STATIC_POEMS[activePoemIndex].title}</h2>
+               <div className="text-2xl md:text-3xl text-slate-800 leading-relaxed italic whitespace-pre-wrap font-christmas min-h-[250px] flex items-center justify-center">
+                  {STATIC_POEMS[activePoemIndex].content}
+               </div>
+               <div className="mt-12 flex justify-center gap-4">
+                  <button 
+                    onClick={() => setActivePoemIndex(0)} 
+                    className={`w-4 h-4 rounded-full transition-all ${activePoemIndex === 0 ? 'bg-red-600 scale-125' : 'bg-red-200'}`}
+                  ></button>
+                  <button 
+                    onClick={() => setActivePoemIndex(1)} 
+                    className={`w-4 h-4 rounded-full transition-all ${activePoemIndex === 1 ? 'bg-red-600 scale-125' : 'bg-red-200'}`}
+                  ></button>
+               </div>
+               <button 
+                onClick={() => setActivePoemIndex((prev) => (prev === 0 ? 1 : 0))}
+                className="mt-10 text-red-600 font-bold uppercase tracking-widest text-xs hover:text-red-400 transition-colors"
+               >
+                 View Next Verse →
+               </button>
+            </div>
           </div>
         )}
 
