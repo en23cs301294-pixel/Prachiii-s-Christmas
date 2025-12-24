@@ -6,7 +6,7 @@ export const generateChristmasPoem = async (crushName: string, mood: string): Pr
   const apiKey = process.env.API_KEY;
   
   if (!apiKey) {
-    throw new Error("Magic Key Missing: Go to Netlify settings and add your 'API_KEY'.");
+    throw new Error("API_KEY is missing. Please add it to your Hosting Provider's Environment Variables (Vercel/Netlify settings).");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -18,7 +18,7 @@ export const generateChristmasPoem = async (crushName: string, mood: string): Pr
       The mood is ${mood}. 
       RULES: 
       1. DO NOT use the word "love". 
-      2. Use words like "sparkle", "wonder", "festive", "shine". 
+      2. Use words like "sparkle", "wonder", "festive", "shine", "magic". 
       3. Maximum 8 lines.`,
       config: {
         responseMimeType: "application/json",
@@ -34,12 +34,12 @@ export const generateChristmasPoem = async (crushName: string, mood: string): Pr
     });
 
     if (!response.text) {
-      throw new Error("Empty response from the North Pole.");
+      throw new Error("The North Pole is busy. Please try again in a moment!");
     }
 
     return JSON.parse(response.text);
   } catch (err: any) {
-    console.error("Gemini Error:", err);
+    console.error("Gemini API Error Detail:", err);
     throw new Error(err.message || "Failed to connect to Santa's workshop.");
   }
 };
