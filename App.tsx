@@ -5,8 +5,8 @@ import Santa from './components/Santa';
 import { AppState, ChristmasPoem } from './types';
 import { generateChristmasPoem } from './services/geminiService';
 
-// PRIMARY: Your local file. SECONDARY: Fallback if local is missing/broken.
-const LOCAL_TRACK = './background-music.mp3';
+// Vercel handles root-relative paths (starting with /) best for assets.
+const LOCAL_TRACK = '/background-music.mp3';
 const FALLBACK_TRACK = 'https://www.chosic.com/wp-content/uploads/2021/11/Jingle-Bells-Christmas-Instrumental.mp3';
 
 const App: React.FC = () => {
@@ -36,6 +36,7 @@ Stay wonderful.`);
         audioObj.current = new Audio();
         audioObj.current.loop = true;
         audioObj.current.volume = 0.5;
+        audioObj.current.preload = 'auto';
       }
 
       // 2. Try to play the local file first
@@ -46,13 +47,13 @@ Stay wonderful.`);
       if (playPromise !== undefined) {
         playPromise
           .then(() => {
-            console.log("Local audio playing successfully!");
+            console.log("Local audio playing on Vercel!");
             setIsMuted(false);
             setShowUnlock(false);
           })
           .catch((err) => {
-            console.warn("Local audio failed, trying fallback...", err);
-            // 3. FALLBACK: Try the internet source if local fails
+            console.warn("Local audio failed or not found, trying cloud fallback...", err);
+            // 3. FALLBACK: Try the cloud source if local is 404 or fails
             if (audioObj.current) {
               audioObj.current.src = FALLBACK_TRACK;
               audioObj.current.play()
@@ -61,14 +62,14 @@ Stay wonderful.`);
                   setShowUnlock(false);
                 })
                 .catch(finalErr => {
-                  console.error("All audio sources failed:", finalErr);
-                  setShowUnlock(false); // Enter site anyway
+                  console.error("All audio sources failed. Entering site silently.", finalErr);
+                  setShowUnlock(false); 
                 });
             }
           });
       }
     } catch (e) {
-      console.error("Audio engine crash:", e);
+      console.error("Audio engine error:", e);
       setShowUnlock(false);
     }
   };
@@ -95,7 +96,7 @@ Stay wonderful.`);
       setView(AppState.MESSAGE_GEN);
     } catch (error: any) {
       console.error("Gemini Error:", error);
-      alert(`Santa's Workshop Message: 🎅\n\nI couldn't generate the poem. If you are on Netlify, make sure to add your 'API_KEY' in the site settings!\n\nError: ${error.message}`);
+      alert(`Santa's Workshop Message: 🎅\n\nI couldn't generate the poem. On Vercel, make sure you added the 'API_KEY' environment variable!\n\nError: ${error.message}`);
     } finally {
       setLoading(false);
     }
