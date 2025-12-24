@@ -5,10 +5,9 @@ import Santa from './components/Santa';
 import { AppState, ChristmasPoem } from './types';
 import { generateChristmasPoem } from './services/geminiService';
 
-// Path logic: Vercel serves root files directly.
-const LOCAL_TRACK = './background-music.mp3';
-// Reliability Fallback: A very stable, public Christmas instrumental.
-const RELIABLE_CDN_TRACK = 'https://www.chosic.com/wp-content/uploads/2021/11/Jingle-Bells-Christmas-Instrumental.mp3';
+// Cloud-hosted sources for "Ordinary" by Alex Warren & a backup
+const PRIMARY_SONG = 'https://files.catbox.moe/p55v2i.mp3'; // Alex Warren - Ordinary (Public Stream)
+const BACKUP_SONG = 'https://www.chosic.com/wp-content/uploads/2021/11/Jingle-Bells-Christmas-Instrumental.mp3';
 
 const App: React.FC = () => {
   const [view, setView] = useState<AppState>(AppState.HOME);
@@ -30,46 +29,44 @@ I hope your Christmas is filled with as much sparkle and joy as you bring to eve
 
 Stay wonderful.`);
 
-  // Robust Audio Initializer
+  // Function to initialize audio on user gesture
   const startMagic = async () => {
     try {
       if (!audioObj.current) {
         audioObj.current = new Audio();
         audioObj.current.loop = true;
         audioObj.current.volume = 0.5;
+        audioObj.current.crossOrigin = "anonymous";
       }
 
-      const tryPlay = async (source: string) => {
+      const tryPlay = async (url: string) => {
         if (!audioObj.current) return false;
-        audioObj.current.src = source;
+        audioObj.current.src = url;
         try {
           await audioObj.current.play();
           return true;
         } catch (e) {
-          console.warn(`Source ${source} failed:`, e);
+          console.warn(`Audio source ${url} failed:`, e);
           return false;
         }
       };
 
-      // Priority 1: Local File
-      let success = await tryPlay(LOCAL_TRACK);
-
-      // Priority 2: High Reliability CDN
+      // Try playing the requested song
+      let success = await tryPlay(PRIMARY_SONG);
+      
+      // Fallback if primary fails
       if (!success) {
-        console.log("Switching to CDN fallback...");
-        success = await tryPlay(RELIABLE_CDN_TRACK);
+        success = await tryPlay(BACKUP_SONG);
       }
 
       if (success) {
         setIsMuted(false);
-        setShowUnlock(false);
-      } else {
-        // Even if all fail, let her in so she can see the messages!
-        console.error("All audio failed. Entering silently.");
-        setShowUnlock(false);
       }
+      
+      // Always unlock the UI even if audio fails (so she can read the poem)
+      setShowUnlock(false);
     } catch (e) {
-      console.error("Audio engine failed entirely:", e);
+      console.error("Critical audio error:", e);
       setShowUnlock(false);
     }
   };
@@ -96,7 +93,7 @@ Stay wonderful.`);
       setView(AppState.MESSAGE_GEN);
     } catch (error: any) {
       console.error("Gemini Error:", error);
-      alert(`Santa's Message: 🎅\n\n${error.message}\n\nCheck Vercel Project Settings > Environment Variables > API_KEY.`);
+      alert(`Santa's Alert 🎅: \n\n${error.message}\n\nImportant: On Vercel, go to Settings -> Environment Variables and add 'API_KEY'.`);
     } finally {
       setLoading(false);
     }
@@ -117,43 +114,42 @@ Stay wonderful.`);
       <Snowfall />
       <Santa />
       
-      {/* MOBILE UNLOCK SCREEN - CRITICAL FOR MOBILE AUDIO */}
+      {/* UNLOCK OVERLAY - MUST TAP TO ALLOW AUDIO */}
       {showUnlock && (
         <div className="fixed inset-0 z-[100] bg-[#020617] flex flex-col items-center justify-center p-6 text-center">
-           <div className="text-8xl mb-8 animate-bounce">🎁</div>
+           <div className="text-9xl mb-8 animate-bounce">🎁</div>
            <h2 className="text-5xl md:text-7xl font-christmas text-red-500 mb-6 drop-shadow-2xl">A Gift for {crushName}...</h2>
            <p className="text-slate-400 mb-10 max-w-md text-lg italic leading-relaxed">
-             "Tap the button to unwrap magic."
+             "Tap to unwrap your Christmas surprise."
            </p>
            <button 
             onClick={startMagic}
-            className="bg-red-600 hover:bg-red-500 text-white px-14 py-6 rounded-full font-bold text-2xl shadow-[0_0_50px_rgba(220,38,38,0.6)] transition-all hover:scale-110 active:scale-95 border-b-8 border-red-800"
+            className="bg-red-600 hover:bg-red-500 text-white px-16 py-8 rounded-full font-bold text-3xl shadow-[0_0_60px_rgba(220,38,38,0.5)] transition-all hover:scale-110 active:scale-95 border-b-8 border-red-900"
            >
              Unwrap ✨
            </button>
         </div>
       )}
 
-      {/* Music Control */}
+      {/* Persistent Music Control */}
       {!showUnlock && (
         <button 
           onClick={toggleMusic}
-          className={`fixed bottom-10 left-10 z-50 p-5 rounded-full backdrop-blur-2xl border border-white/20 shadow-2xl transition-all hover:scale-110 active:scale-90 ${!isMuted ? 'bg-green-500/40 text-white animate-pulse shadow-[0_0_20px_rgba(34,197,94,0.4)]' : 'bg-white/10 text-white/30'}`}
+          className={`fixed bottom-10 left-10 z-50 p-6 rounded-full backdrop-blur-3xl border border-white/20 shadow-2xl transition-all hover:scale-110 active:scale-90 ${!isMuted ? 'bg-green-500/40 text-white animate-pulse shadow-[0_0_20px_rgba(34,197,94,0.4)]' : 'bg-white/10 text-white/30'}`}
         >
           {isMuted ? (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
             </svg>
           ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M12 18.364l-4.707-4.707H4a1 1 0 01-1-1v-4a1 1 0 011-1h3.293L12 5.636v12.728z" />
             </svg>
           )}
         </button>
       )}
 
-      {/* Header */}
       <nav className="fixed top-0 left-0 w-full p-6 z-40 flex justify-between items-center backdrop-blur-md bg-black/10 border-b border-white/5">
         <h1 className="text-3xl font-christmas font-bold tracking-widest cursor-pointer hover:text-red-400 transition-colors" onClick={() => setView(AppState.HOME)}>
           Festive Hearts
@@ -182,17 +178,17 @@ Stay wonderful.`);
             </div>
 
             <div className="bg-white/5 backdrop-blur-2xl p-10 rounded-[3rem] border border-white/10 shadow-2xl max-w-lg mx-auto">
-              <h3 className="text-3xl font-semibold mb-8 font-christmas text-red-400 tracking-wide">Magic Poem Generator</h3>
+              <h3 className="text-3xl font-semibold mb-8 font-christmas text-red-400 tracking-wide">Poem Generator</h3>
               <div className="space-y-5">
                 <input 
                   type="text" 
-                  className="w-full bg-black/30 border border-white/10 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-red-500 transition-all text-xl text-center placeholder:text-white/10"
+                  className="w-full bg-black/30 border border-white/10 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-red-500 transition-all text-xl text-center"
                   value={crushName}
                   onChange={(e) => setCrushName(e.target.value)}
                   placeholder="Enter Name..."
                 />
                 <select 
-                  className="w-full bg-black/30 border border-white/10 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-red-500 text-xl appearance-none text-center"
+                  className="w-full bg-black/30 border border-white/10 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-red-500 text-xl text-center appearance-none cursor-pointer"
                   value={mood}
                   onChange={(e) => setMood(e.target.value)}
                 >
@@ -203,10 +199,13 @@ Stay wonderful.`);
                 <button 
                   onClick={handleCreatePoem}
                   disabled={loading}
-                  className="w-full bg-gradient-to-r from-red-600 to-red-500 hover:scale-[1.02] py-6 rounded-2xl font-bold text-2xl shadow-2xl transition-all transform active:scale-95 flex justify-center items-center gap-4 mt-6 border-b-4 border-red-800"
+                  className="w-full bg-gradient-to-r from-red-600 to-red-500 hover:scale-[1.02] py-6 rounded-2xl font-bold text-2xl shadow-2xl transition-all transform active:scale-95 flex justify-center items-center gap-4 mt-6 border-b-4 border-red-800 disabled:opacity-50"
                 >
                   {loading ? (
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                    <div className="flex items-center gap-3">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                      <span>Asking Santa...</span>
+                    </div>
                   ) : (
                     <>Generate Magic ✨</>
                   )}
@@ -218,12 +217,12 @@ Stay wonderful.`);
               <div className="bg-white/5 backdrop-blur-xl p-10 rounded-[2.5rem] border border-white/10 hover:border-green-500/30 transition-all cursor-pointer group text-left shadow-2xl" onClick={() => setView(AppState.PERSONAL_NOTE)}>
                 <div className="text-6xl mb-6 group-hover:scale-125 transition-transform duration-500">✉️</div>
                 <h4 className="text-3xl font-bold mb-4 text-green-400 font-christmas">A Heartfelt Note</h4>
-                <p className="text-slate-400 text-lg">A private message kept warm for you in the North Pole.</p>
+                <p className="text-slate-400 text-lg">A private message kept warm just for you.</p>
               </div>
               <div className="bg-white/5 backdrop-blur-xl p-10 rounded-[2.5rem] border border-white/10 hover:border-red-500/30 transition-all cursor-pointer group text-left shadow-2xl" onClick={() => setView(AppState.SURPRISE)}>
                 <div className="text-6xl mb-6 group-hover:rotate-12 transition-transform duration-500">🌟</div>
                 <h4 className="text-3xl font-bold mb-4 text-red-400 font-christmas">Hidden Surprise</h4>
-                <p className="text-slate-400 text-lg">Every Christmas tree has one special sparkle. Find yours.</p>
+                <p className="text-slate-400 text-lg">Find the special sparkle in the digital tree.</p>
               </div>
             </div>
           </div>
@@ -243,7 +242,7 @@ Stay wonderful.`);
                 </div>
                 <div className="mt-20 pt-10 border-t border-slate-100">
                    <p className="text-slate-400 text-sm mb-8 uppercase tracking-[0.3em] font-bold">Crafted for {crushName}</p>
-                   <button onClick={() => setView(AppState.HOME)} className="bg-green-600 hover:bg-green-700 text-white px-12 py-5 rounded-full font-bold shadow-xl transition-all hover:scale-105 active:scale-95 text-xl">Back to Magic</button>
+                   <button onClick={() => setView(AppState.HOME)} className="bg-green-600 hover:bg-green-700 text-white px-12 py-5 rounded-full font-bold shadow-xl transition-all hover:scale-105 active:scale-95 text-xl">Close</button>
                 </div>
               </div>
             ) : (
