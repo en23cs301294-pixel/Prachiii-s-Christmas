@@ -6,7 +6,7 @@ export interface ChristmasPoem {
 
 export enum AppState {
   HOME = 'HOME',
-  MESSAGE_GEN = 'MESSAGE_GEN',
+  POEMS = 'POEMS',
   PERSONAL_NOTE = 'PERSONAL_NOTE',
   SURPRISE = 'SURPRISE'
 }
