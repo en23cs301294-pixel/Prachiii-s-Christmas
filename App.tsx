@@ -5,9 +5,10 @@ import Santa from './components/Santa';
 import { AppState, ChristmasPoem } from './types';
 import { generateChristmasPoem } from './services/geminiService';
 
-// Vercel handles root-relative paths (starting with /) best for assets.
-const LOCAL_TRACK = '/background-music.mp3';
-const FALLBACK_TRACK = 'https://www.chosic.com/wp-content/uploads/2021/11/Jingle-Bells-Christmas-Instrumental.mp3';
+// Path logic: Vercel serves root files directly.
+const LOCAL_TRACK = './background-music.mp3';
+// Reliability Fallback: A very stable, public Christmas instrumental.
+const RELIABLE_CDN_TRACK = 'https://www.chosic.com/wp-content/uploads/2021/11/Jingle-Bells-Christmas-Instrumental.mp3';
 
 const App: React.FC = () => {
   const [view, setView] = useState<AppState>(AppState.HOME);
@@ -29,47 +30,46 @@ I hope your Christmas is filled with as much sparkle and joy as you bring to eve
 
 Stay wonderful.`);
 
-  const startMagic = () => {
+  // Robust Audio Initializer
+  const startMagic = async () => {
     try {
-      // 1. Create the Audio Object
       if (!audioObj.current) {
         audioObj.current = new Audio();
         audioObj.current.loop = true;
         audioObj.current.volume = 0.5;
-        audioObj.current.preload = 'auto';
       }
 
-      // 2. Try to play the local file first
-      audioObj.current.src = LOCAL_TRACK;
-      
-      const playPromise = audioObj.current.play();
+      const tryPlay = async (source: string) => {
+        if (!audioObj.current) return false;
+        audioObj.current.src = source;
+        try {
+          await audioObj.current.play();
+          return true;
+        } catch (e) {
+          console.warn(`Source ${source} failed:`, e);
+          return false;
+        }
+      };
 
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            console.log("Local audio playing on Vercel!");
-            setIsMuted(false);
-            setShowUnlock(false);
-          })
-          .catch((err) => {
-            console.warn("Local audio failed or not found, trying cloud fallback...", err);
-            // 3. FALLBACK: Try the cloud source if local is 404 or fails
-            if (audioObj.current) {
-              audioObj.current.src = FALLBACK_TRACK;
-              audioObj.current.play()
-                .then(() => {
-                  setIsMuted(false);
-                  setShowUnlock(false);
-                })
-                .catch(finalErr => {
-                  console.error("All audio sources failed. Entering site silently.", finalErr);
-                  setShowUnlock(false); 
-                });
-            }
-          });
+      // Priority 1: Local File
+      let success = await tryPlay(LOCAL_TRACK);
+
+      // Priority 2: High Reliability CDN
+      if (!success) {
+        console.log("Switching to CDN fallback...");
+        success = await tryPlay(RELIABLE_CDN_TRACK);
+      }
+
+      if (success) {
+        setIsMuted(false);
+        setShowUnlock(false);
+      } else {
+        // Even if all fail, let her in so she can see the messages!
+        console.error("All audio failed. Entering silently.");
+        setShowUnlock(false);
       }
     } catch (e) {
-      console.error("Audio engine error:", e);
+      console.error("Audio engine failed entirely:", e);
       setShowUnlock(false);
     }
   };
@@ -96,7 +96,7 @@ Stay wonderful.`);
       setView(AppState.MESSAGE_GEN);
     } catch (error: any) {
       console.error("Gemini Error:", error);
-      alert(`Santa's Workshop Message: 🎅\n\nI couldn't generate the poem. On Vercel, make sure you added the 'API_KEY' environment variable!\n\nError: ${error.message}`);
+      alert(`Santa's Message: 🎅\n\n${error.message}\n\nCheck Vercel Project Settings > Environment Variables > API_KEY.`);
     } finally {
       setLoading(false);
     }
@@ -117,19 +117,19 @@ Stay wonderful.`);
       <Snowfall />
       <Santa />
       
-      {/* MOBILE UNLOCK SCREEN */}
+      {/* MOBILE UNLOCK SCREEN - CRITICAL FOR MOBILE AUDIO */}
       {showUnlock && (
         <div className="fixed inset-0 z-[100] bg-[#020617] flex flex-col items-center justify-center p-6 text-center">
            <div className="text-8xl mb-8 animate-bounce">🎁</div>
            <h2 className="text-5xl md:text-7xl font-christmas text-red-500 mb-6 drop-shadow-2xl">A Gift for {crushName}...</h2>
            <p className="text-slate-400 mb-10 max-w-md text-lg italic leading-relaxed">
-             "Tap the button to unwrap a digital Christmas wonderland."
+             "Tap the button to unwrap magic."
            </p>
            <button 
             onClick={startMagic}
             className="bg-red-600 hover:bg-red-500 text-white px-14 py-6 rounded-full font-bold text-2xl shadow-[0_0_50px_rgba(220,38,38,0.6)] transition-all hover:scale-110 active:scale-95 border-b-8 border-red-800"
            >
-             Unwrap Magic ✨
+             Unwrap ✨
            </button>
         </div>
       )}
@@ -168,7 +168,6 @@ Stay wonderful.`);
         </div>
       </nav>
 
-      {/* Content */}
       <main className="pt-36 px-4 pb-24 max-w-4xl mx-auto z-10 relative">
         {view === AppState.HOME && (
           <div className="text-center space-y-16 py-10">
