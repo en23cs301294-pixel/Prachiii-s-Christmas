@@ -30,11 +30,13 @@ const App: React.FC = () => {
   
   const [personalNoteText] = useState(`Hey Prachiii, 
 
-I was just thinking about how much of a bright spot you've been this year. Your energy is honestly contagious, and I really appreciate having you around. 
+Umeed karta hu acchi hogi tum. Tabiyat wagerah bhi acchi hogi. Thandi nhi lagi hogi 😂 Nahaya nhi hoga atleast 1 mahine se 🐼😼 Ha ha me sab janta hu 😼🐣  
 
-I hope your Christmas is filled with as much sparkle and joy as you bring to everyone else. Can't wait for all the fun stuff we'll do next year!
+Dekho To zara is ladki ko, kitna chamak rhi h aaj 😒🦥 kya h is cartooni ladki ka raaz, aise hi raho idiot ladkiiiii...... Waise me christmas wish bhi kisko kar rha hu........... jo khud ek angel h, batao kitna nadan hu me🐣!
 
-Stay wonderful.`);
+Kehte h ki duaaa or daan bata ke nhi karteeee.... .. bas dil se karte h........... toh me tumhare liye ye chhoti si duaa karta hu ki tum hamesha khush raho, tumhari zindagi me hamesha pyaar or khushiyaan bani rahe..... or tum jese log hamesha apne aas paas khushiyaan baant te rahe...... or haan me us din thaaa gussee me lekin us din ke baad nhiiii (spelling mistakes thi us dairy me🐼), usme likhaa tha na sab trash ho gaya... Isiliye ye 12 bajne ke pahla bana rha hu taaki prove kar saku ki haaa.... I'm still the same little girllll... 
+Mere se itne jaldi peecha nhi chootegaaaa....... 
+Hamesha Khush raho.... 🎄🎁❄️❤️`);
 
   // THE CRITICAL FIX: Unlock audio via user gesture for Vercel/Netlify/Mobile
   const startMagic = () => {
@@ -249,9 +251,9 @@ Stay wonderful.`);
              ) : (
                <div className="text-center space-y-12 animate-scale-in max-w-2xl bg-white/5 p-16 rounded-[4rem] border border-white/10 backdrop-blur-2xl shadow-2xl relative overflow-hidden">
                  <div className="text-[10rem] animate-bounce drop-shadow-2xl">🌟</div>
-                 <h3 className="text-6xl md:text-8xl font-christmas text-yellow-400 drop-shadow-[0_0_20px_rgba(250,204,21,0.5)]">You're Magic!</h3>
+                 <h3 className="text-6xl md:text-8xl font-christmas text-yellow-400 drop-shadow-[0_0_20px_rgba(250,204,21,0.5)]">You're Amazing Okieee!</h3>
                  <p className="text-3xl md:text-4xl text-slate-100 italic leading-relaxed font-christmas">
-                   "You have a way of making the world brighter just by being in it. Have an amazing holiday, Prachiii!"
+                   "Tareef ki adat ho gai h kyaaa... Bhago yaha seeeeee......, Wiase meri tareef kar sakti ho 🐼 me thodi mana karungaaaa.... And I hope this small thing will make your day happy and a smile on your face.. lips to lambe haiii hi tumharee😂"
                  </p>
                  <button 
                   onClick={() => setOpenedGift(false)}
@@ -266,7 +268,7 @@ Stay wonderful.`);
       </main>
 
       <footer className="fixed bottom-0 w-full p-8 text-center text-[10px] uppercase tracking-[0.6em] opacity-30 z-40 backdrop-blur-sm pointer-events-none">
-        Holiday Magic for {crushName} • 2024
+        Holiday Magic for {crushName} • MY LIL ANGEL MISS
       </footer>
 
       <style>{`
