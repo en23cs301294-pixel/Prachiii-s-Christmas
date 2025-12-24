@@ -2,9 +2,10 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { ChristmasPoem } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 export const generateChristmasPoem = async (crushName: string, mood: string): Promise<ChristmasPoem> => {
+  // Initialize inside the function to be safer during deployment boot-up
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: `Write a short, sweet, and festive Christmas poem for someone named ${crushName}. 
@@ -23,6 +24,10 @@ export const generateChristmasPoem = async (crushName: string, mood: string): Pr
       }
     }
   });
+
+  if (!response.text) {
+    throw new Error("No response from Santa's workshop");
+  }
 
   return JSON.parse(response.text);
 };
