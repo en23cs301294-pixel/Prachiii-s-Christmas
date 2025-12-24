@@ -5,8 +5,9 @@ import Santa from './components/Santa';
 import { AppState, ChristmasPoem } from './types';
 import { generateChristmasPoem } from './services/geminiService';
 
-// Reliable Christmas track for mobile browsers
-const FESTIVE_TRACK = 'https://www.chosic.com/wp-content/uploads/2021/11/Jingle-Bells-Christmas-Instrumental.mp3';
+// PRIMARY: Your local file. SECONDARY: Fallback if local is missing/broken.
+const LOCAL_TRACK = './background-music.mp3';
+const FALLBACK_TRACK = 'https://www.chosic.com/wp-content/uploads/2021/11/Jingle-Bells-Christmas-Instrumental.mp3';
 
 const App: React.FC = () => {
   const [view, setView] = useState<AppState>(AppState.HOME);
@@ -22,42 +23,61 @@ const App: React.FC = () => {
   
   const [personalNoteText] = useState(`Hey Prachiii, 
 
-Umeed karta hu acchi hogi tum. Tabiyat wagerah bhi acchi hogi. Thandi nhi lagi hogi 😂 Nahaya nhi hoga atleast 1 mahine se 🐼😼 Ha ha me sab janta hu 😼🐣  
+I was just thinking about how much of a bright spot you've been this year. Your energy is honestly contagious, and I really appreciate having you around. 
 
-Dekho To zara is ladki ko, kitna chamak rhi h aaj 😒🦥 kya h is cartooni ladki ka raaz, aise hi raho idiot ladkiiiii...... Waise me christmas wish bhi kisko kar rha hu........... jo khud ek angel h, batao kitna nadan hu me🐣!
+I hope your Christmas is filled with as much sparkle and joy as you bring to everyone else. Can't wait for all the fun stuff we'll do next year!
 
-Kehte h ki duaaa or daan bata ke nhi karteeee.... .. bas dil se karte h........... toh me tumhare liye ye chhoti si duaa karta hu ki tum hamesha khush raho, tumhari zindagi me hamesha pyaar or khushiyaan bani rahe..... or tum jese log hamesha apne aas paas khushiyaan baant te rahe...... or haan me us din thaaa gussee me lekin us din ke baad nhiiii (spelling mistakes thi us dairy me🐼), usme likhaa tha na sab trash ho gaya... Isiliye ye 12 bajne ke pahla bana rha hu taaki prove kar saku ki haaa.... I'm still the same little girllll... 
-Mere se itne jaldi peecha nhi chootegaaaa....... 
-Hamesha Khush raho.... 🎄🎁❄️❤️`);
+Stay wonderful.`);
 
   const startMagic = () => {
-    // 1. Create and Load Audio immediately on user click (Mandatory for Mobile)
-    if (!audioObj.current) {
-      const audio = new Audio(FESTIVE_TRACK);
-      audio.loop = true;
-      audio.volume = 0.5;
-      audio.load(); // Pre-load source
-      audioObj.current = audio;
-    }
+    try {
+      // 1. Create the Audio Object
+      if (!audioObj.current) {
+        audioObj.current = new Audio();
+        audioObj.current.loop = true;
+        audioObj.current.volume = 0.5;
+      }
 
-    // 2. Play immediately in the same click event
-    audioObj.current.play()
-      .then(() => {
-        setIsMuted(false);
-        setShowUnlock(false);
-      })
-      .catch((err) => {
-        console.error("Autoplay prevented:", err);
-        // If it still fails, we enter the site so she can see the content
-        setShowUnlock(false);
-      });
+      // 2. Try to play the local file first
+      audioObj.current.src = LOCAL_TRACK;
+      
+      const playPromise = audioObj.current.play();
+
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            console.log("Local audio playing successfully!");
+            setIsMuted(false);
+            setShowUnlock(false);
+          })
+          .catch((err) => {
+            console.warn("Local audio failed, trying fallback...", err);
+            // 3. FALLBACK: Try the internet source if local fails
+            if (audioObj.current) {
+              audioObj.current.src = FALLBACK_TRACK;
+              audioObj.current.play()
+                .then(() => {
+                  setIsMuted(false);
+                  setShowUnlock(false);
+                })
+                .catch(finalErr => {
+                  console.error("All audio sources failed:", finalErr);
+                  setShowUnlock(false); // Enter site anyway
+                });
+            }
+          });
+      }
+    } catch (e) {
+      console.error("Audio engine crash:", e);
+      setShowUnlock(false);
+    }
   };
 
   const toggleMusic = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (audioObj.current) {
       if (audioObj.current.paused) {
-        audioObj.current.play();
+        audioObj.current.play().catch(console.error);
         setIsMuted(false);
       } else {
         audioObj.current.pause();
@@ -75,7 +95,7 @@ Hamesha Khush raho.... 🎄🎁❄️❤️`);
       setView(AppState.MESSAGE_GEN);
     } catch (error: any) {
       console.error("Gemini Error:", error);
-      alert(`The North Pole is busy! 🎅\n\nDouble-check that you added 'API_KEY' to your Netlify Environment Variables.\n\nError detail: ${error.message}`);
+      alert(`Santa's Workshop Message: 🎅\n\nI couldn't generate the poem. If you are on Netlify, make sure to add your 'API_KEY' in the site settings!\n\nError: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -92,20 +112,17 @@ Hamesha Khush raho.... 🎄🎁❄️❤️`);
   );
 
   return (
-    <div className="min-h-screen relative text-white selection:bg-red-500 selection:text-white overflow-x-hidden bg-gradient-to-b from-[#0f172a] via-[#7f1d1d] to-[#064e3b] font-sans">
+    <div className="min-h-screen relative text-white selection:bg-red-500 selection:text-white overflow-x-hidden bg-gradient-to-b from-[#020617] via-[#450a0a] to-[#064e3b] font-sans">
       <Snowfall />
       <Santa />
       
-      {/* 
-          MOBILE UNLOCK SCREEN 
-          Essential to satisfy mobile browser "User Interaction" requirements for audio.
-      */}
+      {/* MOBILE UNLOCK SCREEN */}
       {showUnlock && (
-        <div className="fixed inset-0 z-[100] bg-[#0f172a] flex flex-col items-center justify-center p-6 text-center">
+        <div className="fixed inset-0 z-[100] bg-[#020617] flex flex-col items-center justify-center p-6 text-center">
            <div className="text-8xl mb-8 animate-bounce">🎁</div>
            <h2 className="text-5xl md:text-7xl font-christmas text-red-500 mb-6 drop-shadow-2xl">A Gift for {crushName}...</h2>
            <p className="text-slate-400 mb-10 max-w-md text-lg italic leading-relaxed">
-             "Tap the button to unwrap a digital Christmas wonderland and start the music."
+             "Tap the button to unwrap a digital Christmas wonderland."
            </p>
            <button 
             onClick={startMagic}
@@ -116,11 +133,11 @@ Hamesha Khush raho.... 🎄🎁❄️❤️`);
         </div>
       )}
 
-      {/* Music Control - Only shows after unwrap */}
+      {/* Music Control */}
       {!showUnlock && (
         <button 
           onClick={toggleMusic}
-          className={`fixed bottom-10 left-10 z-50 p-5 rounded-full backdrop-blur-2xl border border-white/20 shadow-2xl transition-all hover:scale-110 active:scale-90 ${!isMuted ? 'bg-green-500/40 text-white animate-pulse' : 'bg-white/10 text-white/30'}`}
+          className={`fixed bottom-10 left-10 z-50 p-5 rounded-full backdrop-blur-2xl border border-white/20 shadow-2xl transition-all hover:scale-110 active:scale-90 ${!isMuted ? 'bg-green-500/40 text-white animate-pulse shadow-[0_0_20px_rgba(34,197,94,0.4)]' : 'bg-white/10 text-white/30'}`}
         >
           {isMuted ? (
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -281,7 +298,7 @@ Hamesha Khush raho.... 🎄🎁❄️❤️`);
                  <div className="text-[10rem] animate-bounce drop-shadow-2xl">🌟</div>
                  <h3 className="text-6xl md:text-8xl font-christmas text-yellow-400 drop-shadow-[0_0_20px_rgba(250,204,21,0.5)]">You're Magic!</h3>
                  <p className="text-3xl md:text-4xl text-slate-100 italic leading-relaxed font-christmas">
-                   "Tareef ki adat ho gai h kyaaa... Bhago yaha seeeeee......, Wiase meri tareef kar sakti ho 🐼 me thodi mana karungaaaa.... And I hope this small thing will make your day happy and a smile on your face.. lips to lambe haiii hi tumharee😂!"
+                   "You have a way of making the world brighter just by being in it. Have an amazing holiday, Prachiii!"
                  </p>
                  <button 
                   onClick={() => setOpenedGift(false)}
@@ -296,7 +313,7 @@ Hamesha Khush raho.... 🎄🎁❄️❤️`);
       </main>
 
       <footer className="fixed bottom-0 w-full p-8 text-center text-[10px] uppercase tracking-[0.6em] opacity-30 z-40 backdrop-blur-sm pointer-events-none">
-        Holiday Magic for {crushName} • LIL ANGLE MISS
+        Holiday Magic for {crushName} • 2024
       </footer>
 
       <style>{`
